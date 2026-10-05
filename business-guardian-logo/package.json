@@ -1,0 +1,15 @@
+{
+  "name": "business-guardian-logo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Business Guardian — logo and identity system (emblem, lockups, icons, wordmark).",
+  "scripts": {
+    "build": "node tools/build.mjs"
+  },
+  "devDependencies": {
+    "@expo-google-fonts/outfit": "^0.4.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "opentype.js": "^2.0.0"
+  }
+}
