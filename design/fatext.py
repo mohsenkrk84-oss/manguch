@@ -1,11 +1,32 @@
 # -*- coding: utf-8 -*-
 """Persian text shaping engine: uharfbuzz (shaping) + freetype-py (raster) + PIL (composite).
 Works with fonts that lack Arabic Presentation Forms (e.g. Hasti).
+
+Key correctness notes:
+- Pure-RTL text is shaped in LOGICAL order with direction=rtl (HarfBuzz outputs
+  visual order). Feeding visual-order text with direction=ltr breaks joining
+  around ZWNJ, so that trick must NOT be used for RTL text.
+- python-bidi's get_display() drops U+200C (ZWNJ), so it is only used for
+  mixed-direction text (Latin inside Persian), with ZWNJ smuggled as NBSP.
+- Bracket mirroring (bidi function, not shaping) is applied manually on the
+  rtl-direct path.
 """
 import uharfbuzz as hb
 import freetype
 from bidi.algorithm import get_display
 from PIL import Image
+
+_MIRROR = {0x28: 0x29, 0x29: 0x28, 0x5B: 0x5D, 0x5D: 0x5B, 0x7B: 0x7D, 0x7D: 0x7B,
+           0xAB: 0xBB, 0xBB: 0xAB, 0x2039: 0x203A, 0x203A: 0x2039,
+           0x3C: 0x3E, 0x3E: 0x3C}
+
+
+def _has_ltr(text):
+    return any("A" <= c <= "Z" or "a" <= c <= "z" for c in text)
+
+
+def _has_rtl(text):
+    return any("\u0590" <= c <= "\u08ff" for c in text)  # U+0590..U+08FF
 
 
 class FaFont:
@@ -26,12 +47,27 @@ class FaFont:
 
     def shape(self, text):
         """Return (glyphs, width_px). glyphs = list of (gid, x_offset, y_offset, x_advance)."""
-        visual = get_display(text)
+        has_ltr = _has_ltr(text)
+        has_rtl = _has_rtl(text)
         buf = hb.Buffer()
-        buf.add_str(visual)
-        buf.direction = "ltr"
-        buf.script = "arab"
-        buf.language = "fa"
+        if has_rtl and not has_ltr:
+            # Pure RTL: logical order + rtl direction (+ manual bracket mirror).
+            buf.add_str(text.translate(_MIRROR))
+            buf.direction = "rtl"
+            buf.script = "arab"
+            buf.language = "fa"
+        elif has_ltr and not has_rtl:
+            buf.add_str(text)
+            buf.direction = "ltr"
+            buf.script = "latn"
+            buf.language = "en"
+        else:
+            # Mixed-direction: bidi reorder; smuggle ZWNJ through NBSP (bidi drops it).
+            visual = get_display(text.replace("‌", " ")).replace(" ", "‌")
+            buf.add_str(visual)
+            buf.direction = "ltr"
+            buf.script = "arab"
+            buf.language = "fa"
         hb.shape(self._hbfont, buf, {"kern": True, "liga": True})
         glyphs = []
         for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
