@@ -2,18 +2,16 @@
 """Persian text shaping engine: uharfbuzz (shaping) + freetype-py (raster) + PIL (composite).
 Works with fonts that lack Arabic Presentation Forms (e.g. Hasti).
 
-Key correctness notes:
-- Pure-RTL text is shaped in LOGICAL order with direction=rtl (HarfBuzz outputs
-  visual order). Feeding visual-order text with direction=ltr breaks joining
-  around ZWNJ, so that trick must NOT be used for RTL text.
-- python-bidi's get_display() drops U+200C (ZWNJ), so it is only used for
-  mixed-direction text (Latin inside Persian), with ZWNJ smuggled as NBSP.
-- Bracket mirroring (bidi function, not shaping) is applied manually on the
-  rtl-direct path.
+Shaping model (mini-bidi, no python-bidi — it drops U+200C):
+1. Itemize text into directional runs: R (RTL incl. ZWNJ), L (Latin), D (digits),
+   N (neutrals resolved by neighbours, else paragraph direction).
+2. Mirror brackets inside R runs (bidi mirroring is not done by HarfBuzz).
+3. Shape each run with its own direction (R->rtl, L/D->ltr).
+4. Concatenate runs: reversed for RTL paragraph, in-order for LTR.
+This keeps digit order (۱٬۷۹۹٬۰۰۰), ZWNJ joining, parens and mixed text correct.
 """
 import uharfbuzz as hb
 import freetype
-from bidi.algorithm import get_display
 from PIL import Image
 
 _MIRROR = {0x28: 0x29, 0x29: 0x28, 0x5B: 0x5D, 0x5D: 0x5B, 0x7B: 0x7D, 0x7D: 0x7B,
@@ -21,12 +19,55 @@ _MIRROR = {0x28: 0x29, 0x29: 0x28, 0x5B: 0x5D, 0x5D: 0x5B, 0x7B: 0x7D, 0x7D: 0x7
            0x3C: 0x3E, 0x3E: 0x3C}
 
 
-def _has_ltr(text):
-    return any("A" <= c <= "Z" or "a" <= c <= "z" for c in text)
+def _char_class(c):
+    o = ord(c)
+    if "A" <= c <= "Z" or "a" <= c <= "z" or 0x00C0 <= o <= 0x02AF:
+        return "L"
+    if c.isdecimal() or o in (0x066C, 0x066B):
+        return "D"
+    if 0x0590 <= o <= 0x08FF or o in (0x200C, 0x200D):
+        return "R"
+    return "N"
 
 
-def _has_rtl(text):
-    return any("\u0590" <= c <= "\u08ff" for c in text)  # U+0590..U+08FF
+def _itemize(text):
+    n = len(text)
+    if n == 0:
+        return "L", []
+    cls = [_char_class(c) for c in text]
+    base = "L"
+    for c in cls:
+        if c in ("L", "R"):
+            base = c
+            break
+    else:
+        base = "R" if "R" in cls else "L"
+    # resolve neutrals: between same class -> that class, else base direction
+    res = list(cls)
+    i = 0
+    while i < n:
+        if res[i] != "N":
+            i += 1
+            continue
+        j = i
+        while j < n and res[j] == "N":
+            j += 1
+        prev_c = res[i - 1] if i > 0 else None
+        next_c = res[j] if j < n else None
+        fill = prev_c if (prev_c == next_c and prev_c in ("L", "R", "D")) else base
+        for k in range(i, j):
+            res[k] = fill
+        i = j
+    # group maximal runs
+    runs = []
+    i = 0
+    while i < n:
+        j = i
+        while j < n and res[j] == res[i]:
+            j += 1
+        runs.append((res[i], text[i:j]))
+        i = j
+    return base, runs
 
 
 class FaFont:
@@ -45,34 +86,37 @@ class FaFont:
         self.desc = self.ft.size.descender / 64.0  # negative
         self.height = self.asc - self.desc
 
+    def _shape_run(self, substr, direction, script, language):
+        buf = hb.Buffer()
+        buf.add_str(substr)
+        buf.direction = direction
+        buf.script = script
+        buf.language = language
+        hb.shape(self._hbfont, buf, {"kern": True, "liga": True})
+        return [(info.codepoint, pos.x_offset / 64.0, pos.y_offset / 64.0,
+                 pos.x_advance / 64.0)
+                for info, pos in zip(buf.glyph_infos, buf.glyph_positions)]
+
     def shape(self, text):
         """Return (glyphs, width_px). glyphs = list of (gid, x_offset, y_offset, x_advance)."""
-        has_ltr = _has_ltr(text)
-        has_rtl = _has_rtl(text)
-        buf = hb.Buffer()
-        if has_rtl and not has_ltr:
-            # Pure RTL: logical order + rtl direction (+ manual bracket mirror).
-            buf.add_str(text.translate(_MIRROR))
-            buf.direction = "rtl"
-            buf.script = "arab"
-            buf.language = "fa"
-        elif has_ltr and not has_rtl:
-            buf.add_str(text)
-            buf.direction = "ltr"
-            buf.script = "latn"
-            buf.language = "en"
-        else:
-            # Mixed-direction: bidi reorder; smuggle ZWNJ through NBSP (bidi drops it).
-            visual = get_display(text.replace("‌", " ")).replace(" ", "‌")
-            buf.add_str(visual)
-            buf.direction = "ltr"
-            buf.script = "arab"
-            buf.language = "fa"
-        hb.shape(self._hbfont, buf, {"kern": True, "liga": True})
-        glyphs = []
-        for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-            glyphs.append((info.codepoint, pos.x_offset / 64.0, pos.y_offset / 64.0,
-                            pos.x_advance / 64.0))
+        if not text:
+            return [], 0.0
+        base, runs = _itemize(text)
+        shaped_runs = []
+        for dirc, substr in runs:
+            if dirc == "R":
+                glyphs = self._shape_run(substr.translate(_MIRROR), "rtl", "arab", "fa")
+            elif dirc == "L":
+                glyphs = self._shape_run(substr, "ltr", "latn", "en")
+            else:  # digits: always LTR order
+                if base == "R":
+                    glyphs = self._shape_run(substr, "ltr", "arab", "fa")
+                else:
+                    glyphs = self._shape_run(substr, "ltr", "latn", "en")
+            shaped_runs.append(glyphs)
+        if base == "R":
+            shaped_runs = shaped_runs[::-1]
+        glyphs = [g for run in shaped_runs for g in run]
         width = sum(g[3] for g in glyphs)
         return glyphs, width
 
