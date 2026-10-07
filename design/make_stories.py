@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Instagram story pre-designs (1080x1920) for Manguch mochi course.
-Titles: Hasti | Body: Aviny
+Titles: Hasti | Body: Aviny | Price digits: Aviny (Hasti digits look Latin)
+Explicit escapes: ZWNJ | ئ | Persian digits | ٬
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -177,43 +178,54 @@ def brand_top(img, y, color, sub=None, font_path=None):
         draw_fa(img, (540, y + 82), sub, F(AVINY, 28), color, anchor="mt")
 
 # ---------- content ----------
+ZW = "‌"
+HM = "‌ئی‌"[1]
+D1, D3, D7, D9, D0, SEP = "۱", "۳", "۷", "۹", "۰", "٬"
+assert ZW == "‌" and HM == "‌ئی‌"[1]
+SUB1 = "از صفر تا صد، مثل حرفه" + HM + "ی" + ZW + "ها"
+SUB2 = "مناسب مبتدی" + ZW + "ها و حرفه" + HM + "ی" + ZW + "ها"
 TOPICS_2COL = [
-    ["مواد و ابزار مورد نیاز کار", "۳ روش برتر پخت خمیر موچی", "طعم‌دار کردن خمیر موچی",
-     "اصول فرم دادن خامه", "مقاوم‌سازی خامه در گرما"],
-    ["۳ فیلینگ پایه + فیلینگ پیشرفته", "اصول بقچه‌بندی موچی", "خمیر توت‌فرنگی منگوچ",
-     "نگهداری و ماندگاری"],
+    ["مواد و ابزار مورد نیاز کار", D3 + " روش برتر پخت خمیر موچی",
+     "طعم" + ZW + "دار کردن خمیر موچی",
+     "اصول فرم دادن خامه", "مقاوم" + ZW + "سازی خامه در گرما"],
+    [D3 + " فیلینگ پایه + فیلینگ پیشرفته", "اصول بقچه" + ZW + "بندی موچی",
+     "خمیر توت" + ZW + "فرنگی منگوچ", "نگهداری و ماندگاری"],
 ]
 TOPICS_1COL = ["معرفی مواد و ابزار مورد نیاز کار", "سه روش برتر پخت خمیر موچی",
-               "طعم‌دار کردن خمیر موچی", "اصول فرم دادن خامه", "مقاوم‌سازی خامه در گرما",
-               "سه مدل فیلینگ پایه + فیلینگ پیشرفته", "اصول بقچه‌بندی موچی",
-               "خمیر ویژه توت‌فرنگی منگوچ", "اصول نگهداری و ماندگاری"]
+               "طعم" + ZW + "دار کردن خمیر موچی", "اصول فرم دادن خامه",
+               "مقاوم" + ZW + "سازی خامه در گرما",
+               "سه مدل فیلینگ پایه + فیلینگ پیشرفته", "اصول بقچه" + ZW + "بندی موچی",
+               "خمیر ویژه توت" + ZW + "فرنگی منگوچ", "اصول نگهداری و ماندگاری"]
 ADV_DETAIL = "(براونی، دبی چاکلت، تیرامیسو، موچیز، مارمالاد و…)"
-GIFT = "هدیه ویژه: رسپی براونی + چیزکیک سن‌سباستین"
-PRICE = "۱٬۷۹۹٬۰۰۰ تومان"
-CTA = "برای ثبت‌نام دایرکت بده"
+GIFT = "هدیه ویژه: رسپی براونی + چیزکیک سن" + ZW + "سباستین"
+PRICE = D1 + SEP + D7 + D9 + D9 + SEP + D0 + D0 + D0 + " تومان"
+CTA = "برای ثبت" + ZW + "نام دایرکت بده"
+SEC_A = "تو این دوره یاد می" + ZW + "گیری:"
+SEC_B = "سرفصل" + ZW + "های دوره:"
+CTA_A = "ثبت" + ZW + "نام در دایرکت"
+SUP = "پشتیبانی دائمی"
 
 # ================= DESIGN A : cream bakery =================
-def design_a():
+def design_a(final=False):
     CREAM, BROWN, TERRA, GOLD = (250, 241, 230), (84, 39, 26), (193, 80, 46), (176, 124, 62)
     img = Image.new("RGBA", (W, H), CREAM + (255,))
     dots(img, (176, 124, 62), step=76, r=6, alpha=28)
     brand_top(img, 60, BROWN)
-    tag(img, "پیش‌طرح A")
+    if not final:
+        tag(img, "پیش‌طرح A")
     paste_arch(img, "muchi.jpg", 540, 168, 640, 560, 12, TERRA)
     pill(img, [380, 688, 700, 776], TERRA)
     draw_fa(img, (540, 732), "دوره دوم", F(HASTI_RRD, 46), (255, 255, 255), anchor="mm")
     s = fit(HASTI_RRD, "آموزش موچی", 900, 116)
     draw_fa(img, (540, 800), "آموزش موچی", F(HASTI_RRD, s), BROWN, anchor="mt")
     ty = 800 + F(HASTI_RRD, s).height + 4
-    draw_fa(img, (540, ty), "از صفر تا صد، مثل حرفه‌ای‌ها",
-            F(AVINY, 37), (138, 90, 59), anchor="mt")
-    draw_fa(img, (540, ty + 58), "مناسب مبتدی‌ها و حرفه‌ای‌ها",
-            F(AVINY, 30), GOLD, anchor="mt")
+    draw_fa(img, (540, ty), SUB1, F(AVINY, 37), (138, 90, 59), anchor="mt")
+    draw_fa(img, (540, ty + 58), SUB2, F(AVINY, 30), GOLD, anchor="mt")
     divider(img, int(ty + 128), GOLD)
-    draw_fa(img, (990, int(ty + 152)), "تو این دوره یاد می‌گیری:", F(HASTI_RRD, 44), TERRA, anchor="rt")
+    draw_fa(img, (990, int(ty + 152)), SEC_A, F(HASTI_RRD, 44), TERRA, anchor="rt")
     pill(img, [70, int(ty + 156), 420, int(ty + 222)], TERRA)
     heart(img, 340, int(ty + 189), 22, (255, 255, 255))
-    draw_fa(img, (295, int(ty + 189)), "پشتیبانی دائمی", F(HASTI_RRD, 30), (255, 255, 255), anchor="rm")
+    draw_fa(img, (295, int(ty + 189)), SUP, F(HASTI_RRD, 30), (255, 255, 255), anchor="rm")
     y0, step = int(ty + 242), 60
     cols_x = [990, 500]
     for ci, col in enumerate(TOPICS_2COL):
@@ -232,9 +244,10 @@ def design_a():
     py = gy + 104
     draw_fa(img, (785, py), "هزینه دوره", F(AVINY, 28), BROWN, anchor="mm")
     pill(img, [560, py + 44, 1010, py + 140], BROWN)
-    draw_fa(img, (785, py + 92), PRICE, F(HASTI_RRD, 42), (245, 214, 150), anchor="mm")
+    ps = fit(AVINY, PRICE, 400, 52, 30)
+    draw_fa(img, (785, py + 92), PRICE, F(AVINY, ps), (245, 214, 150), anchor="mm")
     pill(img, [70, py + 44, 520, py + 140], TERRA)
-    draw_fa(img, (295, py + 92), "ثبت‌نام در دایرکت", F(HASTI_RRD, 36), (255, 255, 255), anchor="mm")
+    draw_fa(img, (295, py + 92), CTA_A, F(HASTI_RRD, 36), (255, 255, 255), anchor="mm")
     return img
 
 # ================= DESIGN B : dark luxe =================
@@ -255,10 +268,10 @@ def design_b():
     draw_fa(img, (560, 322), "آموزش\nموچی", tf, CREAM, anchor="rt", line_spacing=1.08,
             shadow=((0, 0, 0), 3, 4))
     tt = 322 + tf.height * 1.08 + tf.height + 10
-    draw_fa(img, (560, tt), "از صفر تا صد، مثل حرفه‌ای‌ها", F(AVINY, 35), GOLD, anchor="rt")
-    draw_fa(img, (560, tt + 58), "مناسب مبتدی‌ها و حرفه‌ای‌ها", F(AVINY, 29), CREAM, anchor="rt")
+    draw_fa(img, (560, tt), SUB1, F(AVINY, 35), GOLD, anchor="rt")
+    draw_fa(img, (560, tt + 58), SUB2, F(AVINY, 29), CREAM, anchor="rt")
     divider(img, int(tt + 128), GOLD, half=380)
-    draw_fa(img, (990, int(tt + 152)), "سرفصل‌های دوره:", F(HASTI_S, 46), GOLD, anchor="rt")
+    draw_fa(img, (990, int(tt + 152)), SEC_B, F(HASTI_S, 46), GOLD, anchor="rt")
     y0, step = int(tt + 232), 62
     for i, t in enumerate(TOPICS_1COL):
         y = y0 + i * step
@@ -273,7 +286,8 @@ def design_b():
     draw_fa(img, (825, gy + 44), GIFT, F(HASTI_S, gs), DARK, anchor="rm")
     py = gy + 104
     draw_fa(img, (990, py), "هزینه دوره", F(AVINY, 28), CREAM, anchor="rt")
-    draw_fa(img, (990, py + 38), PRICE, F(HASTI_S, 56), GOLD, anchor="rt", shadow=((0, 0, 0), 2, 3))
+    ps = fit(AVINY, PRICE, 380, 62, 34)
+    draw_fa(img, (990, py + 38), PRICE, F(AVINY, ps), GOLD, anchor="rt", shadow=((0, 0, 0), 2, 3))
     sup = "پشتیبانی دائمی دوره"
     sf = F(AVINY, 30)
     draw_fa(img, (990, py + 150), sup, sf, CREAM, anchor="rt")
@@ -302,8 +316,8 @@ def design_c():
     s = fit(HASTI_R, "آموزش موچی", 880, 116)
     stroke_text(img, (540, 830), "آموزش موچی", F(HASTI_R, s), RASP, (255, 255, 255), sw=2, anchor="mt")
     th = F(HASTI_R, s).height
-    draw_fa(img, (540, 830 + th + 2), "از صفر تا صد، مثل حرفه‌ای‌ها", F(AVINY, 36), MAROON, anchor="mt")
-    draw_fa(img, (540, 830 + th + 58), "مناسب مبتدی‌ها و حرفه‌ای‌ها + پشتیبانی دائمی",
+    draw_fa(img, (540, 830 + th + 2), SUB1, F(AVINY, 36), MAROON, anchor="mt")
+    draw_fa(img, (540, 830 + th + 58), SUB2 + " + پشتیبانی دائمی",
             F(AVINY, 28), MAROON, anchor="mt")
     cols = [TOPICS_2COL[0], TOPICS_2COL[1]]
     cw, chh, gap = 462, 70, 18
@@ -328,9 +342,9 @@ def design_c():
     gs = fit(HASTI_R, GIFT, 640, 33, 22)
     draw_fa(img, (830, gy + 42), GIFT, F(HASTI_R, gs), MAROON, anchor="rm")
     py = gy + 102
-    ps = fit(HASTI_R, PRICE, 400, 40, 26)
+    ps = fit(AVINY, PRICE, 400, 48, 26)
     rbox(img, [560, py, 1010, py + 100], 50, (255, 255, 255))
-    draw_fa(img, (785, py + 50), PRICE, F(HASTI_R, ps), RASP, anchor="mm")
+    draw_fa(img, (785, py + 50), PRICE, F(AVINY, ps), RASP, anchor="mm")
     pill(img, [70, py, 520, py + 100], RASP)
     cs = fit(HASTI_R, CTA, 400, 33, 22)
     draw_fa(img, (295, py + 50), CTA, F(HASTI_R, cs), (255, 255, 255), anchor="mm")
@@ -339,7 +353,8 @@ def design_c():
 
 if __name__ == "__main__":
     out = os.path.join(ROOT, "design")
-    for name, fn in [("story-A-cream", design_a), ("story-B-dark", design_b), ("story-C-pink", design_c)]:
+    for name, fn in [("story-A-cream", lambda: design_a()), ("story-B-dark", design_b),
+                     ("story-C-pink", design_c), ("story-final-A", lambda: design_a(final=True))]:
         img = fn()
         p = os.path.join(out, name + ".png")
         img.convert("RGB").save(p, quality=92)
